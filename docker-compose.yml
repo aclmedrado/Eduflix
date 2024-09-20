@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: eduflix_user
+      POSTGRES_PASSWORD: eduflix_pass
+      POSTGRES_DB: eduflix_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eduflix_network
+    ports:
+      - "5432:5432"  # Você pode remover se o PostgreSQL não precisar ser acessível externamente
+
+  web:
+    build: .
+    volumes:
+      - ./app:/app
+    expose:
+      - "8000"  # Não precisa expor externamente, apenas para Nginx
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://eduflix_user:eduflix_pass@db:5432/eduflix_db
+    networks:
+      - eduflix_network
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/app/static   # Mapeamento do diretório de estáticos
+    ports:
+      - "80:80"  # Nginx será acessado externamente na porta 80
+    depends_on:
+      - web
+    networks:
+      - eduflix_network
+
+# Definindo o volume para armazenar dados do PostgreSQL
+volumes:
+  postgres_data:
+
+# Criando uma rede customizada chamada 'eduflix_network'
+networks:
+  eduflix_network:
+    driver: bridge
